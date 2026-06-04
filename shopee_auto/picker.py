@@ -1,11 +1,12 @@
 """
-picker.py — ใช้คลิกบนหน้าจอมือถือเพื่อหาพิกัดปุ่ม
+picker.py — คลิกบนหน้าจอมือถือเพื่อหาพิกัดปุ่ม
+
 วิธีใช้:
-  1. เปิดมือถือไปหน้าที่ต้องการหาพิกัด
+  1. เปิดมือถือไปหน้าที่ต้องการ
   2. รัน: python picker.py
-  3. คลิกบนปุ่มที่ต้องการ → พิกัดจะแสดงใน terminal
-  4. กด 's' เพื่อ save พิกัดทั้งหมดลง coords.py
-  5. กด 'q' หรือ ESC เพื่อออก
+  3. กดตัวเลข 1-9 เพื่อเลือกปุ่มที่จะมาร์ก
+  4. คลิกบนหน้าจอ
+  5. กด S เพื่อ save, R เพื่อ refresh, Q เพื่อออก
 """
 
 import subprocess
@@ -14,147 +15,148 @@ import numpy as np
 import json
 import os
 
-COORDS_FILE = "coords.json"
-clicks = {}  # {"ชื่อปุ่ม": (x, y)}
-current_name = ""
+COORDS_FILE    = "coords.json"
+BUTTON_NAMES   = [
+    "upload_button",
+    "latest_file",
+    "select_music",
+    "no_music",
+    "next_button",
+    "description_field",
+    "product_link_button",
+    "no_duet_toggle",
+    "confirm_upload",
+]
+
+clicks       = {}   # {"ชื่อ": (x, y)}
+selected_idx = [0]  # ปุ่มที่เลือกอยู่ตอนนี้
+img_ref      = [None]
+scale_ref    = [1.0]
 
 
 def screenshot():
-    result = subprocess.run(
-        "adb exec-out screencap -p",
-        shell=True, capture_output=True
-    )
+    result = subprocess.run("adb exec-out screencap -p",
+                            shell=True, capture_output=True)
     if not result.stdout:
-        print("ERROR: ไม่พบอุปกรณ์ รัน 'adb devices' เพื่อตรวจสอบ")
+        print("ERROR: ไม่พบมือถือ รัน 'adb devices' เพื่อตรวจสอบ")
         exit(1)
     return cv2.imdecode(np.frombuffer(result.stdout, np.uint8), cv2.IMREAD_COLOR)
 
 
-def redraw(img, clicks):
-    display = img.copy()
-    for name, (x, y) in clicks.items():
-        cv2.circle(display, (x, y), 8, (0, 0, 255), -1)
-        cv2.putText(display, name, (x + 10, y - 5),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
-    return display
+def make_display(img):
+    h, w   = img.shape[:2]
+    scale  = min(700 / h, 400 / w)
+    small  = cv2.resize(img, (int(w * scale), int(h * scale)))
+
+    # วาดจุดที่มาร์กแล้ว
+    for name, (rx, ry) in clicks.items():
+        sx, sy = int(rx * scale), int(ry * scale)
+        cv2.circle(small, (sx, sy), 8, (0, 0, 255), -1)
+        cv2.putText(small, name, (sx + 6, sy - 6),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 1)
+
+    # แถบรายการปุ่มทางซ้าย
+    panel_w = 260
+    panel   = np.zeros((small.shape[0], panel_w, 3), dtype=np.uint8)
+    cv2.putText(panel, "กดเลข -> คลิกบนภาพ", (8, 20),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (200, 200, 200), 1)
+    cv2.putText(panel, "S=save  R=refresh  Q=quit", (8, 38),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.4, (150, 150, 150), 1)
+    cv2.line(panel, (0, 45), (panel_w, 45), (80, 80, 80), 1)
+
+    for i, name in enumerate(BUTTON_NAMES):
+        y       = 65 + i * 28
+        is_sel  = (i == selected_idx[0])
+        is_done = name in clicks
+        color   = (0, 255, 255) if is_sel else ((0, 255, 0) if is_done else (180, 180, 180))
+        prefix  = f"[{i+1}]" + (" >" if is_sel else "  ") + (" * " if is_done else "   ")
+        cv2.putText(panel, prefix + name, (8, y),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.42, color, 1)
+
+    done_count = len(clicks)
+    cv2.putText(panel, f"บันทึกแล้ว: {done_count}/{len(BUTTON_NAMES)}",
+                (8, panel.shape[0] - 12),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (100, 200, 255), 1)
+
+    return np.hstack([panel, small]), scale
 
 
-def on_click(event, x, y, flags, param):
-    global current_name
-    if event == cv2.EVENT_LBUTTONDOWN:
-        if not current_name:
-            print("  กรุณาพิมพ์ชื่อปุ่มใน terminal ก่อนคลิก")
-            return
+def on_click(event, x, y, flags, _):
+    panel_w   = 260
+    if event == cv2.EVENT_LBUTTONDOWN and x > panel_w:
+        real_x = int((x - panel_w) / scale_ref[0])
+        real_y = int(y / scale_ref[0])
+        name   = BUTTON_NAMES[selected_idx[0]]
+        clicks[name] = (real_x, real_y)
+        print(f"  บันทึก '{name}': x={real_x}, y={real_y}")
 
-        clicks[current_name] = (x, y)
-        print(f"  บันทึก '{current_name}': x={x}, y={y}")
-        current_name = ""
+        # เลื่อนไปปุ่มถัดไปอัตโนมัติ
+        if selected_idx[0] < len(BUTTON_NAMES) - 1:
+            selected_idx[0] += 1
 
-        # วาดจุดใหม่
-        display = redraw(param["img"], clicks)
-        cv2.imshow("Picker — กด S=save, R=refresh, Q=quit", display)
+        display, scale_ref[0] = make_display(img_ref[0])
+        cv2.imshow("Picker", display)
 
 
 def save_coords():
-    # บันทึก JSON
     with open(COORDS_FILE, "w", encoding="utf-8") as f:
         json.dump(clicks, f, indent=2, ensure_ascii=False)
-
-    # สร้าง coords.py พร้อมใช้งาน
-    lines = ["COORDS = {\n"]
-    for name, (x, y) in clicks.items():
-        lines.append(f'    "{name}": ({x}, {y}),\n')
-    lines.append("}\n")
-
     with open("coords.py", "w", encoding="utf-8") as f:
-        f.writelines(lines)
-
-    print(f"\n  บันทึกแล้ว → {COORDS_FILE} และ coords.py")
-    print(f"  มีทั้งหมด {len(clicks)} จุด\n")
+        f.write("COORDS = {\n")
+        for name, (x, y) in clicks.items():
+            f.write(f'    "{name}": ({x}, {y}),\n')
+        f.write("}\n")
+    print(f"\n  บันทึกแล้ว {len(clicks)} จุด -> coords.py และ {COORDS_FILE}\n")
 
 
 def load_existing():
     if os.path.exists(COORDS_FILE):
         with open(COORDS_FILE) as f:
-            data = json.load(f)
-        for k, v in data.items():
-            clicks[k] = tuple(v)
-        print(f"โหลดพิกัดเดิม {len(clicks)} จุด จาก {COORDS_FILE}\n")
-
-
-def print_help():
-    print("=" * 45)
-    print("  PICKER — วิธีใช้")
-    print("=" * 45)
-    print("  1. พิมพ์ชื่อปุ่ม แล้วกด Enter")
-    print("  2. คลิกบนหน้าจอมือถือ")
-    print("  กด S  → save พิกัดทั้งหมด")
-    print("  กด R  → refresh ภาพหน้าจอใหม่")
-    print("  กด D  → ลบจุดสุดท้าย")
-    print("  กด Q / ESC → ออก")
-    print("=" * 45)
-    print("\nชื่อปุ่มแนะนำ:")
-    suggested = [
-        "upload_button", "select_music", "no_music",
-        "next_button", "description_field",
-        "product_link_button", "no_duet_toggle",
-        "confirm_upload", "latest_file"
-    ]
-    for s in suggested:
-        status = "✓" if s in clicks else " "
-        print(f"  [{status}] {s}")
-    print()
+            for k, v in json.load(f).items():
+                clicks[k] = tuple(v)
+        print(f"โหลดพิกัดเดิม {len(clicks)} จุด")
 
 
 def main():
-    global current_name
-
-    print_help()
     load_existing()
 
-    img = screenshot()
-    param = {"img": img}
+    img_ref[0]    = screenshot()
+    display, s    = make_display(img_ref[0])
+    scale_ref[0]  = s
 
-    win = "Picker — กด S=save, R=refresh, Q=quit"
-    cv2.imshow(win, redraw(img, clicks))
-    cv2.setMouseCallback(win, on_click, param)
+    cv2.imshow("Picker", display)
+    cv2.setMouseCallback("Picker", on_click)
+
+    print("\n=== PICKER ===")
+    print("กดเลข 1-9 เพื่อเลือกปุ่มที่จะมาร์ก")
+    print("คลิกบนหน้าจอมือถือเพื่อบันทึกพิกัด")
+    print("S = save | R = refresh | Q = ออก\n")
 
     while True:
-        # รับชื่อปุ่มจาก terminal
-        name = input("พิมพ์ชื่อปุ่มที่ต้องการมาร์ก (หรือ s=save, r=refresh, d=ลบ, q=ออก): ").strip()
+        key = cv2.waitKey(30) & 0xFF
 
-        if name.lower() == "q":
+        if key in (ord('q'), ord('Q'), 27):
             break
-        elif name.lower() == "s":
+        elif key in (ord('s'), ord('S')):
             save_coords()
-            print_help()
-        elif name.lower() == "r":
-            img = screenshot()
-            param["img"] = img
-            cv2.imshow(win, redraw(img, clicks))
-            print("  refresh แล้ว\n")
-        elif name.lower() == "d":
-            if clicks:
-                removed = list(clicks.keys())[-1]
-                del clicks[removed]
-                print(f"  ลบ '{removed}' แล้ว\n")
-                cv2.imshow(win, redraw(param["img"], clicks))
-            else:
-                print("  ไม่มีจุดให้ลบ\n")
-        elif name:
-            current_name = name
-            print(f"  ตอนนี้: คลิกบนหน้าจอเพื่อมาร์กปุ่ม '{name}'")
-
-        key = cv2.waitKey(100) & 0xFF
-        if key in (ord('q'), 27):
-            break
+        elif key in (ord('r'), ord('R')):
+            print("  กำลัง refresh...")
+            img_ref[0] = screenshot()
+            display, scale_ref[0] = make_display(img_ref[0])
+            cv2.imshow("Picker", display)
+            print("  refresh แล้ว")
+        elif ord('1') <= key <= ord('9'):
+            idx = key - ord('1')
+            if idx < len(BUTTON_NAMES):
+                selected_idx[0] = idx
+                print(f"  เลือก: {BUTTON_NAMES[idx]}")
+                display, scale_ref[0] = make_display(img_ref[0])
+                cv2.imshow("Picker", display)
 
     cv2.destroyAllWindows()
-    print("\nปิด picker แล้ว")
     if clicks:
-        print(f"พิกัดที่บันทึกไว้ ({len(clicks)} จุด):")
-        for name, (x, y) in clicks.items():
-            print(f"  {name}: ({x}, {y})")
+        save_coords()
+    print("ปิด picker แล้ว")
 
 
 if __name__ == "__main__":
