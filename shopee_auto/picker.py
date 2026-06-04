@@ -19,21 +19,24 @@ import time
 
 COORDS_FILE  = "coords.json"
 BUTTON_NAMES = [
-    "add_video",          # 1 กดเพิ่มวิดีโอ
-    "open_gallery",       # 2 เปิดคลังวิดีโอ
-    "select_video",       # 3 กดเลือกวิดีโอ
-    "confirm_select",     # 4 กดเลือก
-    "latest_video",       # 5 เลือกวิดีโอล่าสุด
-    "select_music",       # 6 เลือกเพลง
-    "tap_exit_music",     # 7 เคาะจอเพื่อออก
-    "next_button",        # 8 ถัดไป
-    "no_reuse_toggle",    # 9 ไม่อนุญาตใช้ซ้ำ
-    "description_field",  # 10 วาง#+รายละเอียด (พิมพ์)
-    "select_product",     # 11 แตะเลือกสินค้า
-    "paste_link_mode",    # 12 เลือกวางแบบลิงก์
-    "link_field",         # 13 วางลิงก์ (พิมพ์)
-    "add_product",        # 14 กดเพิ่ม
-    "post_button",        # 15 กดโพส
+    "add_video",          #  1 กดเพิ่มวิดีโอ
+    "open_gallery",       #  2 กดเปิดคลังวิดีโอ
+    "select_video",       #  3 กดเลือกวิดีโอ
+    "confirm_select",     #  4 กดเลือก
+    "next_button_1",      #  5 กดถัดไป (ครั้งแรก)
+    "select_music",       #  6 กดเลือกเพลง
+    "music_tab",          #  7 กดเพลง (แท็บ)
+    "latest_music",       #  8 เลือกเพลงล่าสุด
+    "confirm_music",      #  9 เลือกเพลง (confirm)
+    "tap_exit_music",     # 10 เคาะหน้าจอเพื่อออก
+    "next_button_2",      # 11 กดถัดไป (ครั้งสอง)
+    "no_reuse_toggle",    # 12 ไม่อนุญาตให้ใช้ซ้ำ
+    "description_field",  # 13 วาง#+รายละเอียด (พิมพ์)
+    "select_product",     # 14 แตะเลือกสินค้า
+    "paste_link_mode",    # 15 เลือกวางแบบลิงก์
+    "link_field",         # 16 วางลิงก์สินค้า (พิมพ์)
+    "add_product",        # 17 กดเพิ่ม
+    "post_button",        # 18 กดโพส
 ]
 
 clicks       = {}
