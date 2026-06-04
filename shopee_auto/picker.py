@@ -4,10 +4,9 @@ picker.py — คลิกบนหน้าจอมือถือเพื่
 วิธีใช้:
   1. เปิดมือถือไปหน้าที่ต้องการ
   2. รัน: python picker.py
-  3. หน้าจอมือถืออัพเดทแบบ live เอง (ไม่ต้องกด R)
-  4. กดตัวเลข 1-9 เพื่อเลือกปุ่มที่จะมาร์ก
-  5. คลิกบนหน้าจอ
-  6. กด S เพื่อ save, Q เพื่อออก
+  3. หน้าจอมือถืออัพเดทเอง
+  4. กดเลข 1-9 เลือกปุ่ม -> คลิกบนภาพ
+  5. กด S = save, Q = ออก (หรือปิดหน้าต่างได้เลย)
 """
 
 import subprocess
@@ -31,30 +30,36 @@ BUTTON_NAMES = [
     "confirm_upload",
 ]
 
-clicks        = {}
-selected_idx  = [0]
-latest_frame  = [None]   # frame ล่าสุดจาก thread
-scale_ref     = [1.0]
-running       = [True]
-frame_lock    = threading.Lock()
+clicks       = {}
+selected_idx = [0]
+latest_frame = [None]
+scale_ref    = [1.0]
+running      = [True]
+frame_lock   = threading.Lock()
 
 
 def screenshot():
-    result = subprocess.run("adb exec-out screencap -p",
-                            shell=True, capture_output=True)
-    if not result.stdout:
+    try:
+        result = subprocess.run(
+            "adb exec-out screencap -p",
+            shell=True, capture_output=True, timeout=10
+        )
+        if not result.stdout:
+            return None
+        return cv2.imdecode(np.frombuffer(result.stdout, np.uint8), cv2.IMREAD_COLOR)
+    except Exception:
         return None
-    return cv2.imdecode(np.frombuffer(result.stdout, np.uint8), cv2.IMREAD_COLOR)
 
 
 def capture_loop():
-    """thread: ดึงภาพหน้าจอมือถือต่อเนื่อง"""
+    """thread: ดึงภาพหน้าจอมือถือต่อเนื่อง (ไม่ถี่เกินไป)"""
     while running[0]:
         frame = screenshot()
         if frame is not None:
             with frame_lock:
                 latest_frame[0] = frame
-        time.sleep(0.05)   # ดึงเร็วที่สุดเท่าที่ adb ไหว
+        # หน่วงพอให้ Windows ไม่ค้างจากการเปิด process ถี่เกิน
+        time.sleep(0.3)
 
 
 def make_display(img):
@@ -62,14 +67,12 @@ def make_display(img):
     scale = min(700 / h, 400 / w)
     small = cv2.resize(img, (int(w * scale), int(h * scale)))
 
-    # วาดจุดที่มาร์กแล้ว
     for name, (rx, ry) in clicks.items():
         sx, sy = int(rx * scale), int(ry * scale)
         cv2.circle(small, (sx, sy), 8, (0, 0, 255), -1)
         cv2.putText(small, name, (sx + 6, sy - 6),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 1)
 
-    # แถบรายการปุ่มทางซ้าย
     panel_w = 260
     panel   = np.zeros((small.shape[0], panel_w, 3), dtype=np.uint8)
     cv2.putText(panel, "LIVE - press 1-9 then click", (8, 20),
@@ -128,11 +131,9 @@ def load_existing():
 def main():
     load_existing()
 
-    # เริ่ม thread ดึงภาพ
     t = threading.Thread(target=capture_loop, daemon=True)
     t.start()
 
-    # รอ frame แรก
     print("กำลังเชื่อมต่อมือถือ...")
     for _ in range(100):
         with frame_lock:
@@ -144,22 +145,31 @@ def main():
         running[0] = False
         return
 
-    cv2.namedWindow("Picker")
-    cv2.setMouseCallback("Picker", on_click)
+    win = "Picker"
+    cv2.namedWindow(win)
+    cv2.setMouseCallback(win, on_click)
 
     print("\n=== PICKER (LIVE) ===")
-    print("หน้าจอมือถืออัพเดทเอง")
     print("กดเลข 1-9 เลือกปุ่ม -> คลิกบนภาพ")
     print("S = save | Q = ออก\n")
 
     while running[0]:
         with frame_lock:
-            frame = latest_frame[0].copy()
+            frame = None if latest_frame[0] is None else latest_frame[0].copy()
 
-        display, scale_ref[0] = make_display(frame)
-        cv2.imshow("Picker", display)
+        if frame is not None:
+            display, scale_ref[0] = make_display(frame)
+            cv2.imshow(win, display)
 
-        key = cv2.waitKey(30) & 0xFF
+        key = cv2.waitKey(50) & 0xFF
+
+        # ตรวจว่าผู้ใช้กดปุ่มปิดหน้าต่าง (X) หรือยัง
+        try:
+            if cv2.getWindowProperty(win, cv2.WND_PROP_VISIBLE) < 1:
+                break
+        except cv2.error:
+            break
+
         if key in (ord('q'), ord('Q'), 27):
             break
         elif key in (ord('s'), ord('S')):
@@ -170,11 +180,14 @@ def main():
                 selected_idx[0] = idx
                 print(f"  เลือก: {BUTTON_NAMES[idx]}")
 
+    # ปิดให้สะอาด แล้วบังคับจบ process กันค้าง
     running[0] = False
     cv2.destroyAllWindows()
+    cv2.waitKey(1)
     if clicks:
         save_coords()
     print("ปิด picker แล้ว")
+    os._exit(0)   # บังคับจบ กัน thread/subprocess ค้าง
 
 
 if __name__ == "__main__":
