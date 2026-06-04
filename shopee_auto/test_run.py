@@ -47,7 +47,7 @@ def tap(name):
     x, y = COORDS[name]
     print(f"  tap {name} ({x}, {y})")
     adb(f"adb shell input tap {x} {y}")
-    time.sleep(1.0)
+    time.sleep(2.0)
 
 def wait(s, reason=""):
     if reason:
@@ -59,14 +59,14 @@ def push_video():
     adb(f'adb push "{VIDEO_LOCAL}" {VIDEO_REMOTE}')
     adb(f"adb shell touch {VIDEO_REMOTE}")
     adb(f"adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file://{VIDEO_REMOTE}")
-    wait(2, "รอ gallery scan")
+    wait(4, "รอ gallery scan")
 
 def fill_text(name, text):
     x, y = COORDS[name]
     d.click(x, y)
-    time.sleep(0.5)
+    time.sleep(1.5)
     d(focused=True).set_text(text)
-    time.sleep(0.5)
+    time.sleep(1.5)
 
 # ============================================================
 # MAIN FLOW
@@ -83,85 +83,87 @@ def main():
     # Step 2 — กดเพิ่มวิดีโอ
     print("\n[2] กดเพิ่มวิดีโอ")
     tap("add_video")
-    wait(1)
+    wait(3, "รอเปิดหน้าเพิ่มวิดีโอ")
 
     # Step 3 — เปิดคลังวิดีโอ
     print("\n[3] เปิดคลังวิดีโอ")
     tap("open_gallery")
-    wait(1.5)
+    wait(4, "รอเปิดคลังภาพ")
 
     # Step 4 — เลือกวิดีโอ (บนซ้าย)
     print("\n[4] เลือกวิดีโอ")
     tap("select_video")
-    wait(1)
+    wait(2)
 
     # Step 5 — กดเลือก
     print("\n[5] กดเลือก")
     tap("confirm_select")
-    wait(2)
+    wait(4, "รือโหลดวิดีโอ")
 
     # Step 6 — กดถัดไป (ครั้งแรก)
     print("\n[6] กดถัดไป (ครั้งแรก)")
     tap("next_button_1")
-    wait(2)
+    wait(4, "รอเปิดหน้าเพลง")
 
     # Step 7 — กดเลือกเพลง
     print("\n[7] กดเลือกเพลง")
     tap("select_music")
-    wait(1.5)
+    wait(3, "รือโหลดรายการเพลง")
 
     # Step 8 — กดแท็บเพลง
     print("\n[8] กดแท็บเพลง")
     tap("music_tab")
-    wait(1)
+    wait(3, "รอโหลดเพลง")
 
     # Step 9 — เลือกเพลงล่าสุด
     print("\n[9] เลือกเพลงล่าสุด")
     tap("latest_music")
-    wait(1)
+    wait(2)
 
     # Step 10 — confirm เพลง
     print("\n[10] confirm เพลง")
     tap("confirm_music")
-    wait(1)
+    wait(3, "รอประมวลผลเพลง")
 
     # Step 11 — เคาะหน้าจอออก
     print("\n[11] เคาะหน้าจอออก")
     tap("tap_exit_music")
-    wait(1)
+    wait(2)
 
     # Step 12 — กดถัดไป (ครั้งสอง)
     print("\n[12] กดถัดไป (ครั้งสอง)")
     tap("next_button_2")
-    wait(2)
+    wait(5, "รอเปิดหน้ารายละเอียด")
 
     # Step 13 — ปุ่มไม่อนุญาตใช้ซ้ำ
     print("\n[13] ปุ่มไม่อนุญาตใช้ซ้ำ")
     tap("no_reuse_toggle")
-    wait(1)
+    wait(2)
 
     # Step 14 — ใส่ description
     print("\n[14] ใส่ description")
     fill_text("description_field", DESCRIPTION)
+    wait(2)
 
     # Step 15 — แตะเลือกสินค้า
     print("\n[15] แตะเลือกสินค้า")
     tap("select_product")
-    wait(1.5)
+    wait(3, "รอเปิดหน้าเลือกสินค้า")
 
     # Step 16 — เลือกวางแบบลิงก์
     print("\n[16] เลือกวางแบบลิงก์")
     tap("paste_link_mode")
-    wait(1)
+    wait(2)
 
     # Step 17 — วางลิงก์สินค้า
     print("\n[17] วางลิงก์สินค้า")
     fill_text("link_field", PRODUCT_LINK)
+    wait(2)
 
     # Step 18 — กดเพิ่ม
     print("\n[18] กดเพิ่ม")
     tap("add_product")
-    wait(1)
+    wait(3, "รอเพิ่มสินค้าเสร็จ")
 
     print("\n" + "="*40)
     print("✓ ครบ 17 ขั้น — หยุดก่อน ไม่กด post")
