@@ -1,12 +1,13 @@
 """
-picker.py — คลิกบนหน้าจอมือถือเพื่อหาพิกัดปุ่ม
+picker.py — คลิกบนหน้าจอมือถือเพื่อหาพิกัดปุ่ม (LIVE MODE)
 
 วิธีใช้:
   1. เปิดมือถือไปหน้าที่ต้องการ
   2. รัน: python picker.py
-  3. กดตัวเลข 1-9 เพื่อเลือกปุ่มที่จะมาร์ก
-  4. คลิกบนหน้าจอ
-  5. กด S เพื่อ save, R เพื่อ refresh, Q เพื่อออก
+  3. หน้าจอมือถืออัพเดทแบบ live เอง (ไม่ต้องกด R)
+  4. กดตัวเลข 1-9 เพื่อเลือกปุ่มที่จะมาร์ก
+  5. คลิกบนหน้าจอ
+  6. กด S เพื่อ save, Q เพื่อออก
 """
 
 import subprocess
@@ -14,9 +15,11 @@ import cv2
 import numpy as np
 import json
 import os
+import threading
+import time
 
-COORDS_FILE    = "coords.json"
-BUTTON_NAMES   = [
+COORDS_FILE  = "coords.json"
+BUTTON_NAMES = [
     "upload_button",
     "latest_file",
     "select_music",
@@ -28,25 +31,36 @@ BUTTON_NAMES   = [
     "confirm_upload",
 ]
 
-clicks       = {}   # {"ชื่อ": (x, y)}
-selected_idx = [0]  # ปุ่มที่เลือกอยู่ตอนนี้
-img_ref      = [None]
-scale_ref    = [1.0]
+clicks        = {}
+selected_idx  = [0]
+latest_frame  = [None]   # frame ล่าสุดจาก thread
+scale_ref     = [1.0]
+running       = [True]
+frame_lock    = threading.Lock()
 
 
 def screenshot():
     result = subprocess.run("adb exec-out screencap -p",
                             shell=True, capture_output=True)
     if not result.stdout:
-        print("ERROR: ไม่พบมือถือ รัน 'adb devices' เพื่อตรวจสอบ")
-        exit(1)
+        return None
     return cv2.imdecode(np.frombuffer(result.stdout, np.uint8), cv2.IMREAD_COLOR)
 
 
+def capture_loop():
+    """thread: ดึงภาพหน้าจอมือถือต่อเนื่อง"""
+    while running[0]:
+        frame = screenshot()
+        if frame is not None:
+            with frame_lock:
+                latest_frame[0] = frame
+        time.sleep(0.05)   # ดึงเร็วที่สุดเท่าที่ adb ไหว
+
+
 def make_display(img):
-    h, w   = img.shape[:2]
-    scale  = min(700 / h, 400 / w)
-    small  = cv2.resize(img, (int(w * scale), int(h * scale)))
+    h, w  = img.shape[:2]
+    scale = min(700 / h, 400 / w)
+    small = cv2.resize(img, (int(w * scale), int(h * scale)))
 
     # วาดจุดที่มาร์กแล้ว
     for name, (rx, ry) in clicks.items():
@@ -58,9 +72,9 @@ def make_display(img):
     # แถบรายการปุ่มทางซ้าย
     panel_w = 260
     panel   = np.zeros((small.shape[0], panel_w, 3), dtype=np.uint8)
-    cv2.putText(panel, "กดเลข -> คลิกบนภาพ", (8, 20),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.45, (200, 200, 200), 1)
-    cv2.putText(panel, "S=save  R=refresh  Q=quit", (8, 38),
+    cv2.putText(panel, "LIVE - press 1-9 then click", (8, 20),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 255, 0), 1)
+    cv2.putText(panel, "S=save   Q=quit", (8, 38),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.4, (150, 150, 150), 1)
     cv2.line(panel, (0, 45), (panel_w, 45), (80, 80, 80), 1)
 
@@ -73,8 +87,7 @@ def make_display(img):
         cv2.putText(panel, prefix + name, (8, y),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.42, color, 1)
 
-    done_count = len(clicks)
-    cv2.putText(panel, f"บันทึกแล้ว: {done_count}/{len(BUTTON_NAMES)}",
+    cv2.putText(panel, f"saved: {len(clicks)}/{len(BUTTON_NAMES)}",
                 (8, panel.shape[0] - 12),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.45, (100, 200, 255), 1)
 
@@ -82,20 +95,15 @@ def make_display(img):
 
 
 def on_click(event, x, y, flags, _):
-    panel_w   = 260
+    panel_w = 260
     if event == cv2.EVENT_LBUTTONDOWN and x > panel_w:
         real_x = int((x - panel_w) / scale_ref[0])
         real_y = int(y / scale_ref[0])
         name   = BUTTON_NAMES[selected_idx[0]]
         clicks[name] = (real_x, real_y)
         print(f"  บันทึก '{name}': x={real_x}, y={real_y}")
-
-        # เลื่อนไปปุ่มถัดไปอัตโนมัติ
         if selected_idx[0] < len(BUTTON_NAMES) - 1:
             selected_idx[0] += 1
-
-        display, scale_ref[0] = make_display(img_ref[0])
-        cv2.imshow("Picker", display)
 
 
 def save_coords():
@@ -120,39 +128,49 @@ def load_existing():
 def main():
     load_existing()
 
-    img_ref[0]    = screenshot()
-    display, s    = make_display(img_ref[0])
-    scale_ref[0]  = s
+    # เริ่ม thread ดึงภาพ
+    t = threading.Thread(target=capture_loop, daemon=True)
+    t.start()
 
-    cv2.imshow("Picker", display)
+    # รอ frame แรก
+    print("กำลังเชื่อมต่อมือถือ...")
+    for _ in range(100):
+        with frame_lock:
+            if latest_frame[0] is not None:
+                break
+        time.sleep(0.1)
+    else:
+        print("ERROR: ไม่พบมือถือ รัน 'adb devices' เพื่อตรวจสอบ")
+        running[0] = False
+        return
+
+    cv2.namedWindow("Picker")
     cv2.setMouseCallback("Picker", on_click)
 
-    print("\n=== PICKER ===")
-    print("กดเลข 1-9 เพื่อเลือกปุ่มที่จะมาร์ก")
-    print("คลิกบนหน้าจอมือถือเพื่อบันทึกพิกัด")
-    print("S = save | R = refresh | Q = ออก\n")
+    print("\n=== PICKER (LIVE) ===")
+    print("หน้าจอมือถืออัพเดทเอง")
+    print("กดเลข 1-9 เลือกปุ่ม -> คลิกบนภาพ")
+    print("S = save | Q = ออก\n")
 
-    while True:
+    while running[0]:
+        with frame_lock:
+            frame = latest_frame[0].copy()
+
+        display, scale_ref[0] = make_display(frame)
+        cv2.imshow("Picker", display)
+
         key = cv2.waitKey(30) & 0xFF
-
         if key in (ord('q'), ord('Q'), 27):
             break
         elif key in (ord('s'), ord('S')):
             save_coords()
-        elif key in (ord('r'), ord('R')):
-            print("  กำลัง refresh...")
-            img_ref[0] = screenshot()
-            display, scale_ref[0] = make_display(img_ref[0])
-            cv2.imshow("Picker", display)
-            print("  refresh แล้ว")
         elif ord('1') <= key <= ord('9'):
             idx = key - ord('1')
             if idx < len(BUTTON_NAMES):
                 selected_idx[0] = idx
                 print(f"  เลือก: {BUTTON_NAMES[idx]}")
-                display, scale_ref[0] = make_display(img_ref[0])
-                cv2.imshow("Picker", display)
 
+    running[0] = False
     cv2.destroyAllWindows()
     if clicks:
         save_coords()
