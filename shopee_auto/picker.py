@@ -73,7 +73,10 @@ def make_display(img):
     scale = min(700 / h, 400 / w)
     small = cv2.resize(img, (int(w * scale), int(h * scale)))
 
+    # วาดเฉพาะจุดที่อยู่ใน BUTTON_NAMES (กรองชื่อเก่าที่ไม่ใช่)
     for name, (rx, ry) in clicks.items():
+        if name not in BUTTON_NAMES:
+            continue
         sx, sy = int(rx * scale), int(ry * scale)
         cv2.circle(small, (sx, sy), 8, (0, 0, 255), -1)
         cv2.putText(small, name, (sx + 6, sy - 6),
@@ -81,14 +84,16 @@ def make_display(img):
 
     panel_w = 300
     panel   = np.zeros((small.shape[0], panel_w, 3), dtype=np.uint8)
-    cv2.putText(panel, "LIVE - N=next B=back, then click", (8, 18),
+    cv2.putText(panel, "N=next B=back  click=mark", (8, 18),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0), 1)
-    cv2.putText(panel, "S=save   Q=quit", (8, 36),
+    cv2.putText(panel, "D=del current  X=clear all", (8, 36),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.4, (150, 150, 150), 1)
-    cv2.line(panel, (0, 43), (panel_w, 43), (80, 80, 80), 1)
+    cv2.putText(panel, "S=save  Q=quit", (8, 54),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.4, (150, 150, 150), 1)
+    cv2.line(panel, (0, 61), (panel_w, 61), (80, 80, 80), 1)
 
     for i, name in enumerate(BUTTON_NAMES):
-        y       = 58 + i * 25
+        y       = 76 + i * 25
         is_sel  = (i == selected_idx[0])
         is_done = name in clicks
         color   = (0, 255, 255) if is_sel else ((0, 255, 0) if is_done else (180, 180, 180))
@@ -187,6 +192,18 @@ def main():
         elif key in (ord('b'), ord('B')):
             selected_idx[0] = (selected_idx[0] - 1) % len(BUTTON_NAMES)
             print(f"  เลือก: {BUTTON_NAMES[selected_idx[0]]}")
+        elif key in (ord('d'), ord('D')):
+            # ลบจุดของปุ่มที่เลือกอยู่
+            name = BUTTON_NAMES[selected_idx[0]]
+            if name in clicks:
+                del clicks[name]
+                print(f"  ลบ '{name}' แล้ว")
+            else:
+                print(f"  '{name}' ยังไม่มีจุดให้ลบ")
+        elif key in (ord('x'), ord('X')):
+            # ล้างทุกจุด รวมถึงชื่อเก่าที่ไม่อยู่ใน BUTTON_NAMES
+            clicks.clear()
+            print("  ล้างทุกจุดแล้ว")
 
     # ปิดให้สะอาด แล้วบังคับจบ process กันค้าง
     running[0] = False
