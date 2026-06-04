@@ -19,15 +19,21 @@ import time
 
 COORDS_FILE  = "coords.json"
 BUTTON_NAMES = [
-    "upload_button",
-    "latest_file",
-    "select_music",
-    "no_music",
-    "next_button",
-    "description_field",
-    "product_link_button",
-    "no_duet_toggle",
-    "confirm_upload",
+    "add_video",          # 1 กดเพิ่มวิดีโอ
+    "open_gallery",       # 2 เปิดคลังวิดีโอ
+    "select_video",       # 3 กดเลือกวิดีโอ
+    "confirm_select",     # 4 กดเลือก
+    "latest_video",       # 5 เลือกวิดีโอล่าสุด
+    "select_music",       # 6 เลือกเพลง
+    "tap_exit_music",     # 7 เคาะจอเพื่อออก
+    "next_button",        # 8 ถัดไป
+    "no_reuse_toggle",    # 9 ไม่อนุญาตใช้ซ้ำ
+    "description_field",  # 10 วาง#+รายละเอียด (พิมพ์)
+    "select_product",     # 11 แตะเลือกสินค้า
+    "paste_link_mode",    # 12 เลือกวางแบบลิงก์
+    "link_field",         # 13 วางลิงก์ (พิมพ์)
+    "add_product",        # 14 กดเพิ่ม
+    "post_button",        # 15 กดโพส
 ]
 
 clicks       = {}
@@ -73,22 +79,22 @@ def make_display(img):
         cv2.putText(small, name, (sx + 6, sy - 6),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 1)
 
-    panel_w = 260
+    panel_w = 300
     panel   = np.zeros((small.shape[0], panel_w, 3), dtype=np.uint8)
-    cv2.putText(panel, "LIVE - press 1-9 then click", (8, 20),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 255, 0), 1)
-    cv2.putText(panel, "S=save   Q=quit", (8, 38),
+    cv2.putText(panel, "LIVE - N=next B=back, then click", (8, 18),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0), 1)
+    cv2.putText(panel, "S=save   Q=quit", (8, 36),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.4, (150, 150, 150), 1)
-    cv2.line(panel, (0, 45), (panel_w, 45), (80, 80, 80), 1)
+    cv2.line(panel, (0, 43), (panel_w, 43), (80, 80, 80), 1)
 
     for i, name in enumerate(BUTTON_NAMES):
-        y       = 65 + i * 28
+        y       = 58 + i * 25
         is_sel  = (i == selected_idx[0])
         is_done = name in clicks
         color   = (0, 255, 255) if is_sel else ((0, 255, 0) if is_done else (180, 180, 180))
-        prefix  = f"[{i+1}]" + (" >" if is_sel else "  ") + (" * " if is_done else "   ")
+        prefix  = f"{i+1:2d}" + (" >" if is_sel else "  ") + ("* " if is_done else "  ")
         cv2.putText(panel, prefix + name, (8, y),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.42, color, 1)
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
 
     cv2.putText(panel, f"saved: {len(clicks)}/{len(BUTTON_NAMES)}",
                 (8, panel.shape[0] - 12),
@@ -98,7 +104,7 @@ def make_display(img):
 
 
 def on_click(event, x, y, flags, _):
-    panel_w = 260
+    panel_w = 300
     if event == cv2.EVENT_LBUTTONDOWN and x > panel_w:
         real_x = int((x - panel_w) / scale_ref[0])
         real_y = int(y / scale_ref[0])
@@ -150,7 +156,8 @@ def main():
     cv2.setMouseCallback(win, on_click)
 
     print("\n=== PICKER (LIVE) ===")
-    print("กดเลข 1-9 เลือกปุ่ม -> คลิกบนภาพ")
+    print("N = ปุ่มถัดไป | B = ย้อนกลับ -> คลิกบนภาพ")
+    print("(คลิกแล้วเลื่อนไปปุ่มถัดไปเอง)")
     print("S = save | Q = ออก\n")
 
     while running[0]:
@@ -174,11 +181,12 @@ def main():
             break
         elif key in (ord('s'), ord('S')):
             save_coords()
-        elif ord('1') <= key <= ord('9'):
-            idx = key - ord('1')
-            if idx < len(BUTTON_NAMES):
-                selected_idx[0] = idx
-                print(f"  เลือก: {BUTTON_NAMES[idx]}")
+        elif key in (ord('n'), ord('N')):
+            selected_idx[0] = (selected_idx[0] + 1) % len(BUTTON_NAMES)
+            print(f"  เลือก: {BUTTON_NAMES[selected_idx[0]]}")
+        elif key in (ord('b'), ord('B')):
+            selected_idx[0] = (selected_idx[0] - 1) % len(BUTTON_NAMES)
+            print(f"  เลือก: {BUTTON_NAMES[selected_idx[0]]}")
 
     # ปิดให้สะอาด แล้วบังคับจบ process กันค้าง
     running[0] = False
