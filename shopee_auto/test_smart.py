@@ -16,92 +16,117 @@ SONGS = [
     "Feeling Nostalgic (Prelude In A Major - Chopin)",
 ]
 
-# Step 2 — กดปุ่ม + เพิ่มวิดีโอ
-d(description="click top right create icon").click()
-time.sleep(3)
+round_num = 0
 
-# Step 3 — เปิดคลังภาพ
-d(resourceId="com.shopee.th:id/ll_gallery_entrance").click()
-time.sleep(4)
+while True:
+    round_num += 1
+    print(f"\n{'='*40}")
+    print(f"รอบที่ {round_num}")
+    print(f"{'='*40}")
 
-# Step 4 — กด tab วิดีโอ แล้วเลือกวิดีโอตัวแรก
-d(description="วิดีโอ").click()
-time.sleep(2)
-d(resourceId="com.shopee.th:id/ll_check").click()
-time.sleep(2)
+    # Step 2 — กดปุ่ม + เพิ่มวิดีโอ
+    d(description="click top right create icon").click()
+    print("[2] กดปุ่มเพิ่มวิดีโอแล้ว")
+    time.sleep(3)
 
-# Step 5 — กดถัดไป
-d(resourceId="com.shopee.th:id/tv_pick_top_next").click()
-time.sleep(5)
+    # Step 3 — เปิดคลังภาพ
+    d(resourceId="com.shopee.th:id/ll_gallery_entrance").click()
+    print("[3] เปิดคลังภาพแล้ว")
+    time.sleep(4)
 
-# Step 6 — กดเพิ่มเพลง
-d(resourceId="com.shopee.th:id/ll_music").click()
-time.sleep(4)
+    # Step 4 — กด tab วิดีโอ แล้วเลือกวิดีโอตัวแรก
+    d(description="วิดีโอ").click()
+    time.sleep(2)
+    d(resourceId="com.shopee.th:id/ll_check").click()
+    print("[4] เลือกวิดีโอแล้ว")
+    time.sleep(2)
 
-# Step 7 — กดแท็บ 'ล่าสุด'
-d(description="ล่าสุด").click()
-time.sleep(3)
+    # Step 5 — กดถัดไป
+    d(resourceId="com.shopee.th:id/tv_pick_top_next").click()
+    print("[5] กดถัดไปแล้ว")
+    time.sleep(5)
 
-# Step 8 — สุ่มเพลง + scroll หา + กด
-picked = random.choice(SONGS)
-d(scrollable=True).scroll.to(text=picked)
-time.sleep(1)
-d(text=picked).click()
-time.sleep(3)
+    # Step 6 — กดเพิ่มเพลง
+    d(resourceId="com.shopee.th:id/ll_music").click()
+    print("[6] กดเพิ่มเพลงแล้ว")
+    time.sleep(4)
 
-# Step 9 — แตะพื้นที่ว่างเพื่อปิดหน้าเลือกเพลง
-d.click(360, 400)
-time.sleep(2)
+    # Step 7 — กดแท็บ 'ล่าสุด'
+    d(description="ล่าสุด").click()
+    print("[7] กดล่าสุดแล้ว")
+    time.sleep(3)
 
-# Step 10 — กดถัดไป (compress)
-d(resourceId="com.shopee.th:id/tv_compress").click()
-time.sleep(5)
+    # Step 8 — สุ่มเพลง + scroll หา + กด
+    picked = random.choice(SONGS)
+    print(f"[8] สุ่มได้: {picked}")
+    d(scrollable=True).scroll.to(text=picked)
+    time.sleep(1)
+    d(text=picked).click()
+    print(f"[8] กดเพลง '{picked}' แล้ว")
+    time.sleep(3)
 
-# Step 11 — ใส่ caption
-d(resourceId="com.shopee.th.dfpluginshopee16:id/et_caption").click()
-time.sleep(1)
-d(focused=True).set_text(DESCRIPTION)
-time.sleep(1)
+    # Step 9 — แตะพื้นที่ว่างเพื่อปิดหน้าเลือกเพลง
+    d.click(360, 400)
+    print("[9] ปิดหน้าเลือกเพลงแล้ว")
+    time.sleep(2)
 
-# Step 12 — แตะนอกช่องพิมพ์ก่อน แล้วกด toggle ไม่ใช้ซ้ำ
-d.click(100, 600)
-time.sleep(1)
-d.click(650, 636)
-time.sleep(2)
+    # Step 10 — กดถัดไป (compress)
+    d(resourceId="com.shopee.th:id/tv_compress").click()
+    print("[10] กดถัดไปแล้ว")
+    time.sleep(5)
 
-# Step 13 — กดเพิ่มสินค้า
-d(resourceId="com.shopee.th.dfpluginshopee16:id/ll_add_product_symbol").click()
-time.sleep(3)
+    # Step 11 — ใส่ caption
+    d(resourceId="com.shopee.th.dfpluginshopee16:id/et_caption").click()
+    time.sleep(1)
+    d(focused=True).set_text(DESCRIPTION)
+    print("[11] ใส่ caption แล้ว")
+    time.sleep(1)
 
-# Step 14 — เปิดหน้ากรอกลิงก์ (tap icon ขวาบน)
-d.click(665, 112)
-time.sleep(2)
+    # Step 12 — แตะนอกช่องพิมพ์ก่อน แล้วกด toggle ไม่ใช้ซ้ำ
+    d.click(100, 600)
+    time.sleep(1)
+    d.click(650, 636)
+    print("[12] toggle ไม่อนุญาตใช้ซ้ำแล้ว")
+    time.sleep(2)
 
-# Step 15 — ใส่ลิงก์สินค้า 2 ลิงก์ (คั่นด้วย newline)
-d(className="android.widget.EditText").click()
-time.sleep(1)
-d(focused=True).set_text(PRODUCT_LINKS)
-time.sleep(1)
+    # Step 13 — กดเพิ่มสินค้า
+    d(resourceId="com.shopee.th.dfpluginshopee16:id/ll_add_product_symbol").click()
+    print("[13] กดเพิ่มสินค้าแล้ว")
+    time.sleep(3)
 
-# Step 16 — ปิด keyboard แล้วกดนำเข้า
-d.press("back")
-time.sleep(1)
-d(text="นำเข้า").click()
-print("[16] กดนำเข้าแล้ว")
-time.sleep(3)
+    # Step 14 — เปิดหน้ากรอกลิงก์ (tap icon ขวาบน)
+    d.click(665, 112)
+    print("[14] เปิดหน้ากรอกลิงก์แล้ว")
+    time.sleep(2)
 
-# Step 17 — เลือกทั้งหมด
-d(text="เลือกทั้งหมด").click()
-print("[17] เลือกทั้งหมดแล้ว")
-time.sleep(1)
+    # Step 15 — ใส่ลิงก์สินค้า 2 ลิงก์ (คั่นด้วย newline)
+    d(className="android.widget.EditText").click()
+    time.sleep(1)
+    d(focused=True).set_text(PRODUCT_LINKS)
+    print("[15] ใส่ลิงก์สินค้าแล้ว")
+    time.sleep(1)
 
-# Step 18 — กดเพิ่ม (ใช้พิกัดเพราะ text="เพิ่ม(2)" ไม่ตรง)
-d.click(469, 1423)
-print("[18] กดเพิ่มแล้ว")
-time.sleep(3)
+    # Step 16 — ปิด keyboard แล้วกดนำเข้า
+    d.press("back")
+    time.sleep(1)
+    d(text="นำเข้า").click()
+    print("[16] กดนำเข้าแล้ว")
+    time.sleep(3)
 
-print("หยุดที่ step 18 — dump หน้าจอแล้วแจ้งไปต่อ")
+    # Step 17 — เลือกทั้งหมด
+    d(text="เลือกทั้งหมด").click()
+    print("[17] เลือกทั้งหมดแล้ว")
+    time.sleep(1)
 
-# Step 19 — กดโพสต์ (ยังไม่รัน — รอยืนยัน)
-# d(resourceId="com.shopee.th.dfpluginshopee16:id/btn_post").click()
-# time.sleep(5)
+    # Step 18 — กดเพิ่ม (ใช้พิกัดเพราะ text="เพิ่ม(2)" ไม่ตรง)
+    d.click(469, 1423)
+    print("[18] กดเพิ่มแล้ว")
+    time.sleep(3)
+
+    # Step 19 — กดโพสต์
+    d(resourceId="com.shopee.th.dfpluginshopee16:id/btn_post").click()
+    print(f"[19] กดโพสต์แล้ว — รอบที่ {round_num} เสร็จ!")
+    time.sleep(10)
+
+    print(f"รอ 5 วินาทีแล้วเริ่มรอบถัดไป...")
+    time.sleep(5)
