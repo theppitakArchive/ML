@@ -83,11 +83,11 @@ time.sleep(1)
 d(focused=True).set_text(PRODUCT_LINKS)
 time.sleep(1)
 
-# Step 16 — กดเพิ่ม
-d(text="เพิ่ม").click()
-time.sleep(3)
+print("หยุดที่ step 15 — dump หน้าจอแล้วแจ้งไปต่อ")
 
-print("หยุดที่ step 16 — dump หน้าจอแล้วแจ้งไปต่อ")
+# Step 16 — กดเพิ่ม (ยังไม่รัน — รอยืนยัน)
+# d(text="เพิ่ม").click()
+# time.sleep(3)
 
 # Step 17 — กดโพสต์ (ยังไม่รัน — รอยืนยัน)
 # d(resourceId="com.shopee.th.dfpluginshopee16:id/btn_post").click()
