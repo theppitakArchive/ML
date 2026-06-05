@@ -1,4 +1,5 @@
 import uiautomator2 as u2
+import subprocess
 import time
 import random
 
@@ -6,6 +7,9 @@ d = u2.connect()
 
 DESCRIPTION = "#สินค้าดี #โปรโมชั่น ราคาพิเศษ สั่งได้เลยค่ะ"
 PRODUCT_LINKS = "https://s.shopee.co.th/6fefvtvzUA\nhttps://s.shopee.co.th/9pbhhkgeWr"
+VIDEO_DIR_LOCAL  = r"C:\platform-tools\videos"
+VIDEO_DIR_REMOTE = "/sdcard/DCIM/Camera"
+TOTAL_VIDEOS = 90
 
 SONGS = [
     "Wira Dance", "Happy", "Sparky Parker", "Down To Business",
@@ -16,13 +20,25 @@ SONGS = [
     "Feeling Nostalgic (Prelude In A Major - Chopin)",
 ]
 
-round_num = 0
+def adb(cmd):
+    subprocess.run(cmd, shell=True)
 
-while True:
-    round_num += 1
+def push_video(n):
+    local  = f"{VIDEO_DIR_LOCAL}\\{n}.mp4"
+    remote = f"{VIDEO_DIR_REMOTE}/{n}.mp4"
+    print(f"[push] {n}.mp4 ...")
+    adb(f'adb push "{local}" "{remote}"')
+    adb(f'adb shell touch "{remote}"')
+    adb(f'adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file://{remote}')
+    time.sleep(4)
+
+for n in range(1, TOTAL_VIDEOS + 1):
     print(f"\n{'='*40}")
-    print(f"รอบที่ {round_num}")
+    print(f"รอบที่ {n} / {TOTAL_VIDEOS}")
     print(f"{'='*40}")
+
+    # Step 1 — push วิดีโอ N เข้ามือถือ
+    push_video(n)
 
     # Step 2 — กดปุ่ม + เพิ่มวิดีโอ
     d(description="click top right create icon").click()
@@ -34,7 +50,7 @@ while True:
     print("[3] เปิดคลังภาพแล้ว")
     time.sleep(4)
 
-    # Step 4 — กด tab วิดีโอ แล้วเลือกวิดีโอตัวแรก
+    # Step 4 — กด tab วิดีโอ แล้วเลือกวิดีโอตัวแรก (ล่าสุด = ที่เพิ่ง push)
     d(description="วิดีโอ").click()
     time.sleep(2)
     d(resourceId="com.shopee.th:id/ll_check").click()
@@ -125,8 +141,9 @@ while True:
 
     # Step 19 — กดโพสต์
     d(resourceId="com.shopee.th.dfpluginshopee16:id/btn_post").click()
-    print(f"[19] กดโพสต์แล้ว — รอบที่ {round_num} เสร็จ!")
+    print(f"[19] กดโพสต์แล้ว — รอบที่ {n}/{TOTAL_VIDEOS} เสร็จ!")
     time.sleep(10)
 
-    print(f"รอ 5 วินาทีแล้วเริ่มรอบถัดไป...")
-    time.sleep(5)
+print("\n" + "="*40)
+print(f"เสร็จครบ {TOTAL_VIDEOS} วิดีโอแล้ว!")
+print("="*40)
