@@ -83,11 +83,11 @@ time.sleep(1)
 d(focused=True).set_text(PRODUCT_LINKS)
 time.sleep(1)
 
-# Step 16 — ปิด keyboard แล้วกดเพิ่ม
+# Step 16 — ปิด keyboard แล้วกดนำเข้า
 d.press("back")
 time.sleep(1)
-d(text="เพิ่ม").click()
-print("[16] กดเพิ่มแล้ว")
+d(text="นำเข้า").click()
+print("[16] กดนำเข้าแล้ว")
 time.sleep(3)
 
 print("หยุดที่ step 16 — dump หน้าจอแล้วแจ้งไปต่อ")
