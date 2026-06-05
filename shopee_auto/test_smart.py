@@ -87,6 +87,8 @@ time.sleep(1)
 d(text="เพิ่ม").click()
 time.sleep(3)
 
-# Step 17 — กดโพสต์
-d(resourceId="com.shopee.th.dfpluginshopee16:id/btn_post").click()
-time.sleep(5)
+print("หยุดที่ step 16 — dump หน้าจอแล้วแจ้งไปต่อ")
+
+# Step 17 — กดโพสต์ (ยังไม่รัน — รอยืนยัน)
+# d(resourceId="com.shopee.th.dfpluginshopee16:id/btn_post").click()
+# time.sleep(5)
