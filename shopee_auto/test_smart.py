@@ -90,8 +90,18 @@ d(text="นำเข้า").click()
 print("[16] กดนำเข้าแล้ว")
 time.sleep(3)
 
-print("หยุดที่ step 16 — dump หน้าจอแล้วแจ้งไปต่อ")
+# Step 17 — เลือกทั้งหมด
+d(text="เลือกทั้งหมด").click()
+print("[17] เลือกทั้งหมดแล้ว")
+time.sleep(1)
 
-# Step 17 — กดโพสต์ (ยังไม่รัน — รอยืนยัน)
+# Step 18 — กดเพิ่ม
+d(text="เพิ่ม").click()
+print("[18] กดเพิ่มแล้ว")
+time.sleep(3)
+
+print("หยุดที่ step 18 — dump หน้าจอแล้วแจ้งไปต่อ")
+
+# Step 19 — กดโพสต์ (ยังไม่รัน — รอยืนยัน)
 # d(resourceId="com.shopee.th.dfpluginshopee16:id/btn_post").click()
 # time.sleep(5)
