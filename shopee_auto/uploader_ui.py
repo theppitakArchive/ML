@@ -43,68 +43,114 @@ def push_video(filename):
     adb(f'adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file://{remote}')
     time.sleep(4)
 
-def run_upload(queue, status_cb, done_cb):
+def interruptible_sleep(seconds, pause_event, cancel_event, interval=0.5):
+    """Sleep ที่ตรวจ pause/cancel ทุก interval วินาที"""
+    elapsed = 0
+    while elapsed < seconds:
+        if cancel_event.is_set():
+            return False
+        while pause_event.is_set():
+            if cancel_event.is_set():
+                return False
+            time.sleep(0.2)
+        time.sleep(interval)
+        elapsed += interval
+    return True
+
+def run_upload(queue, status_cb, done_cb, pause_event, cancel_event):
     d = u2.connect()
     total = len(queue)
 
     for i, filename in enumerate(queue, 1):
+        if cancel_event.is_set():
+            status_cb(f"ยกเลิกแล้ว — หยุดที่ {i-1}/{total}")
+            done_cb(i - 1, cancelled=True)
+            return
+
+        # รอถ้า pause
+        while pause_event.is_set():
+            if cancel_event.is_set():
+                status_cb("ยกเลิกแล้ว")
+                done_cb(i - 1, cancelled=True)
+                return
+            time.sleep(0.2)
+
         status_cb(f"กำลังลง {i}/{total} — {filename}")
 
         push_video(filename)
+        if cancel_event.is_set(): done_cb(i-1, cancelled=True); return
 
         d(description="click top right create icon").click()
-        time.sleep(3)
+        if not interruptible_sleep(3, pause_event, cancel_event): done_cb(i-1, cancelled=True); return
+
         d(resourceId="com.shopee.th:id/ll_gallery_entrance").click()
-        time.sleep(4)
+        if not interruptible_sleep(4, pause_event, cancel_event): done_cb(i-1, cancelled=True); return
+
         d(description="วิดีโอ").click()
-        time.sleep(2)
+        if not interruptible_sleep(2, pause_event, cancel_event): done_cb(i-1, cancelled=True); return
+
         d(resourceId="com.shopee.th:id/ll_check").click()
-        time.sleep(2)
+        if not interruptible_sleep(2, pause_event, cancel_event): done_cb(i-1, cancelled=True); return
+
         d(resourceId="com.shopee.th:id/tv_pick_top_next").click()
-        time.sleep(5)
+        if not interruptible_sleep(5, pause_event, cancel_event): done_cb(i-1, cancelled=True); return
+
         d(resourceId="com.shopee.th:id/ll_music").click()
-        time.sleep(4)
+        if not interruptible_sleep(4, pause_event, cancel_event): done_cb(i-1, cancelled=True); return
+
         d(description="ล่าสุด").click()
-        time.sleep(3)
+        if not interruptible_sleep(3, pause_event, cancel_event): done_cb(i-1, cancelled=True); return
+
         picked = random.choice(SONGS)
         d(scrollable=True).scroll.to(text=picked)
-        time.sleep(1)
+        if not interruptible_sleep(1, pause_event, cancel_event): done_cb(i-1, cancelled=True); return
         d(text=picked).click()
-        time.sleep(3)
+        if not interruptible_sleep(3, pause_event, cancel_event): done_cb(i-1, cancelled=True); return
+
         d.click(360, 400)
-        time.sleep(2)
+        if not interruptible_sleep(2, pause_event, cancel_event): done_cb(i-1, cancelled=True); return
+
         d(resourceId="com.shopee.th:id/tv_compress").click()
-        time.sleep(5)
+        if not interruptible_sleep(5, pause_event, cancel_event): done_cb(i-1, cancelled=True); return
+
         d(resourceId="com.shopee.th.dfpluginshopee16:id/et_caption").click()
-        time.sleep(1)
+        if not interruptible_sleep(1, pause_event, cancel_event): done_cb(i-1, cancelled=True); return
         d(focused=True).set_text(DESCRIPTION)
-        time.sleep(1)
+        if not interruptible_sleep(1, pause_event, cancel_event): done_cb(i-1, cancelled=True); return
+
         d.click(100, 600)
-        time.sleep(1)
+        if not interruptible_sleep(1, pause_event, cancel_event): done_cb(i-1, cancelled=True); return
         d.click(650, 636)
-        time.sleep(2)
+        if not interruptible_sleep(2, pause_event, cancel_event): done_cb(i-1, cancelled=True); return
+
         d(resourceId="com.shopee.th.dfpluginshopee16:id/ll_add_product_symbol").click()
-        time.sleep(3)
+        if not interruptible_sleep(3, pause_event, cancel_event): done_cb(i-1, cancelled=True); return
+
         d.click(665, 112)
-        time.sleep(2)
+        if not interruptible_sleep(2, pause_event, cancel_event): done_cb(i-1, cancelled=True); return
+
         d(className="android.widget.EditText").click()
-        time.sleep(1)
+        if not interruptible_sleep(1, pause_event, cancel_event): done_cb(i-1, cancelled=True); return
         d(focused=True).set_text(PRODUCT_LINKS)
-        time.sleep(1)
+        if not interruptible_sleep(1, pause_event, cancel_event): done_cb(i-1, cancelled=True); return
+
         d.press("back")
-        time.sleep(1)
+        if not interruptible_sleep(1, pause_event, cancel_event): done_cb(i-1, cancelled=True); return
         d(text="นำเข้า").click()
-        time.sleep(3)
+        if not interruptible_sleep(3, pause_event, cancel_event): done_cb(i-1, cancelled=True); return
+
         d(text="เลือกทั้งหมด").click()
-        time.sleep(1)
+        if not interruptible_sleep(1, pause_event, cancel_event): done_cb(i-1, cancelled=True); return
+
         d.click(469, 1423)
-        time.sleep(3)
+        if not interruptible_sleep(3, pause_event, cancel_event): done_cb(i-1, cancelled=True); return
+
         d(resourceId="com.shopee.th.dfpluginshopee16:id/btn_post").click()
-        time.sleep(10)
+        if not interruptible_sleep(10, pause_event, cancel_event): done_cb(i-1, cancelled=True); return
 
         status_cb(f"เสร็จแล้ว {i}/{total} — {filename} ✓")
 
-    done_cb(total)
+    done_cb(total, cancelled=False)
 
 # ============================================================
 # UI
@@ -113,11 +159,14 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Shopee Video Uploader")
-        self.geometry("700x540")
+        self.geometry("700x580")
         self.resizable(False, False)
         self.configure(bg="#f5f5f5")
 
         self._drag_start = None
+        self._pause_event = threading.Event()   # set = paused
+        self._cancel_event = threading.Event()  # set = cancel
+
         self._build_ui()
         self._load_videos()
 
@@ -141,9 +190,9 @@ class App(tk.Tk):
         mid = tk.Frame(top, bg="#f5f5f5")
         mid.pack(side="left", padx=4)
         tk.Button(mid, text="เพิ่ม →", width=8, command=self._add_to_queue).pack(pady=4)
-        tk.Button(mid, text="← ลบ", width=8, command=self._remove_from_queue).pack(pady=4)
-        tk.Button(mid, text="ขึ้น ↑", width=8, command=self._move_up).pack(pady=4)
-        tk.Button(mid, text="ลง ↓", width=8, command=self._move_down).pack(pady=4)
+        tk.Button(mid, text="← ลบ",   width=8, command=self._remove_from_queue).pack(pady=4)
+        tk.Button(mid, text="ขึ้น ↑",  width=8, command=self._move_up).pack(pady=4)
+        tk.Button(mid, text="ลง ↓",   width=8, command=self._move_down).pack(pady=4)
         tk.Button(mid, text="ล้างคิว", width=8, command=self._clear_queue).pack(pady=16)
 
         # right panel
@@ -155,23 +204,40 @@ class App(tk.Tk):
         sb_q = ttk.Scrollbar(rf, orient="vertical", command=self.lb_queue.yview)
         sb_q.pack(side="right", fill="y")
         self.lb_queue.config(yscrollcommand=sb_q.set)
-
-        # drag reorder
         self.lb_queue.bind("<ButtonPress-1>", self._drag_start_cb)
         self.lb_queue.bind("<B1-Motion>", self._drag_motion_cb)
 
-        # ---- start button ----
-        btn_frame = tk.Frame(self, bg="#f5f5f5")
-        btn_frame.pack(fill="x", padx=12, pady=(0, 6))
+        # ---- control buttons ----
+        ctrl = tk.Frame(self, bg="#f5f5f5")
+        ctrl.pack(fill="x", padx=12, pady=(0, 4))
+
+        self.lbl_count = tk.Label(ctrl, text="คิว: 0 วิดีโอ", bg="#f5f5f5", font=("Arial", 10))
+        self.lbl_count.pack(side="left", pady=6)
+
+        self.btn_cancel = tk.Button(
+            ctrl, text="✕  ยกเลิก", font=("Arial", 10, "bold"),
+            bg="#999", fg="white", relief="flat", padx=12, pady=5,
+            state="disabled", command=self._cancel
+        )
+        self.btn_cancel.pack(side="right", padx=(6, 0))
+
+        self.btn_pause = tk.Button(
+            ctrl, text="⏸  หยุดชั่วคราว", font=("Arial", 10, "bold"),
+            bg="#f0a500", fg="white", relief="flat", padx=12, pady=5,
+            state="disabled", command=self._toggle_pause
+        )
+        self.btn_pause.pack(side="right", padx=(6, 0))
+
         self.btn_start = tk.Button(
-            btn_frame, text="▶  Start", font=("Arial", 12, "bold"),
-            bg="#ee4d2d", fg="white", relief="flat", padx=20, pady=6,
+            ctrl, text="▶  Start", font=("Arial", 11, "bold"),
+            bg="#ee4d2d", fg="white", relief="flat", padx=16, pady=5,
             command=self._start
         )
         self.btn_start.pack(side="right")
 
-        self.lbl_count = tk.Label(btn_frame, text="คิว: 0 วิดีโอ", bg="#f5f5f5", font=("Arial", 10))
-        self.lbl_count.pack(side="left", pady=6)
+        # ---- progress bar ----
+        self.progress = ttk.Progressbar(self, mode="determinate")
+        self.progress.pack(fill="x", side="bottom", padx=0)
 
         # ---- status bar ----
         self.status_var = tk.StringVar(value="พร้อมใช้งาน")
@@ -181,10 +247,6 @@ class App(tk.Tk):
             font=("Arial", 10), padx=10, pady=5
         )
         status_bar.pack(fill="x", side="bottom")
-
-        # ---- progress bar ----
-        self.progress = ttk.Progressbar(self, mode="determinate")
-        self.progress.pack(fill="x", side="bottom", padx=0)
 
     def _load_videos(self):
         self.lb_all.delete(0, "end")
@@ -196,8 +258,7 @@ class App(tk.Tk):
 
     def _add_to_queue(self, event=None):
         for i in self.lb_all.curselection():
-            name = self.lb_all.get(i)
-            self.lb_queue.insert("end", name)
+            self.lb_queue.insert("end", self.lb_all.get(i))
         self._update_count()
 
     def _remove_from_queue(self):
@@ -209,20 +270,16 @@ class App(tk.Tk):
         sel = self.lb_queue.curselection()
         if not sel or sel[0] == 0:
             return
-        i = sel[0]
-        val = self.lb_queue.get(i)
-        self.lb_queue.delete(i)
-        self.lb_queue.insert(i - 1, val)
+        i = sel[0]; val = self.lb_queue.get(i)
+        self.lb_queue.delete(i); self.lb_queue.insert(i - 1, val)
         self.lb_queue.selection_set(i - 1)
 
     def _move_down(self):
         sel = self.lb_queue.curselection()
         if not sel or sel[0] == self.lb_queue.size() - 1:
             return
-        i = sel[0]
-        val = self.lb_queue.get(i)
-        self.lb_queue.delete(i)
-        self.lb_queue.insert(i + 1, val)
+        i = sel[0]; val = self.lb_queue.get(i)
+        self.lb_queue.delete(i); self.lb_queue.insert(i + 1, val)
         self.lb_queue.selection_set(i + 1)
 
     def _clear_queue(self):
@@ -249,6 +306,23 @@ class App(tk.Tk):
         self.progress["maximum"] = n if n else 1
         self.progress["value"] = 0
 
+    def _toggle_pause(self):
+        if self._pause_event.is_set():
+            self._pause_event.clear()
+            self.btn_pause.config(text="⏸  หยุดชั่วคราว", bg="#f0a500")
+            self.status_var.set(self.status_var.get().replace(" (หยุดชั่วคราว)", "") + " (ต่อแล้ว)")
+        else:
+            self._pause_event.set()
+            self.btn_pause.config(text="▶  ต่อ", bg="#2ecc71")
+            self.status_var.set(self.status_var.get() + " (หยุดชั่วคราว)")
+
+    def _cancel(self):
+        if messagebox.askyesno("ยืนยัน", "ยกเลิกการลงวิดีโอใช่ไหม?"):
+            self._cancel_event.set()
+            self._pause_event.clear()  # unblock thread ถ้ากำลัง pause อยู่
+            self.btn_cancel.config(state="disabled")
+            self.btn_pause.config(state="disabled")
+
     def _start(self):
         if u2 is None:
             messagebox.showerror("Error", "ไม่พบ uiautomator2\nรัน: pip install uiautomator2")
@@ -258,13 +332,17 @@ class App(tk.Tk):
             messagebox.showwarning("คิวว่าง", "กรุณาเพิ่มวิดีโอเข้าคิวก่อน")
             return
 
+        self._pause_event.clear()
+        self._cancel_event.clear()
+
         self.btn_start.config(state="disabled")
+        self.btn_pause.config(state="normal")
+        self.btn_cancel.config(state="normal")
         self.progress["maximum"] = len(queue)
         self.progress["value"] = 0
 
         def status_cb(msg):
             self.status_var.set(msg)
-            # update progress from "กำลังลง N/T"
             try:
                 n = int(msg.split()[1].split("/")[0])
                 self.progress["value"] = n - 1
@@ -272,13 +350,22 @@ class App(tk.Tk):
                 pass
             self.update_idletasks()
 
-        def done_cb(total):
-            self.progress["value"] = total
-            self.status_var.set(f"เสร็จครบ {total} วิดีโอแล้ว! 🎉")
+        def done_cb(done, cancelled=False):
+            self.progress["value"] = done
+            if cancelled:
+                self.status_var.set(f"ยกเลิกแล้ว — ลงไปแล้ว {done} วิดีโอ")
+            else:
+                self.status_var.set(f"เสร็จครบ {done} วิดีโอแล้ว! 🎉")
+                messagebox.showinfo("เสร็จแล้ว", f"ลงวิดีโอครบ {done} คลิปแล้ว!")
             self.btn_start.config(state="normal")
-            messagebox.showinfo("เสร็จแล้ว", f"ลงวิดีโอครบ {total} คลิปแล้ว!")
+            self.btn_pause.config(state="disabled", text="⏸  หยุดชั่วคราว", bg="#f0a500")
+            self.btn_cancel.config(state="disabled")
 
-        t = threading.Thread(target=run_upload, args=(queue, status_cb, done_cb), daemon=True)
+        t = threading.Thread(
+            target=run_upload,
+            args=(queue, status_cb, done_cb, self._pause_event, self._cancel_event),
+            daemon=True
+        )
         t.start()
 
 
